@@ -96,3 +96,14 @@ To define our own target specification, we can create a JSON file called `x86_64
   "linker": "rust-lld"
 }
 ```
+
+VGA Text Mode
+VGA Text mode is a simple way to print the screen. It allows us to write text directly to the screen by writing to a specific memory address. The VGA Text mode uses a specific format for the characters and their attributes, which allows us to control the color and style of the text. By using VGA Text mode, we can create a simple user interface for our OS kernel and display important information to the user.
+
+VGA Text Buffer
+To print to the screen in VGA Text mode, we need to write to a specific memory address called the VGA text buffer. The VGA text buffer is located at the memory address 0xB8000 and is used to store the characters and their attributes that are displayed on the screen. Each character is represented by a 16-bit value, where the lower 8 bits represent the ASCII code of the character and the upper 8 bits represent the color and style attributes. By writing to the VGA text buffer, we can control what is displayed on the screen and create a simple user interface for our OS kernel.
+Each character in the VGA text buffer is represented by a 16-bit value, where:
+0 - 7: ASCII code of the character
+8 - 11: Foreground color
+12 - 14: Background color
+15: Blinking attribute
