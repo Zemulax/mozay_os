@@ -104,6 +104,8 @@ impl Writer {
     }
 }
 
+
+
 use core::fmt; //import the fmt module from the core library, which allows us to implement the fmt::Write trait for our Writer struct
 
 impl fmt::Write for Writer { //implement the fmt::Write trait for our Writer struct, allowing us to use the write! macro to write formatted strings to the VGA buffer
@@ -119,7 +121,7 @@ use lazy_static::lazy_static; //import the lazy_static macro from the lazy_stati
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer { //a lazily initialized static instance of the Writer struct that can be used throughout the kernel to write to the VGA buffer
         column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black), //set the default color code to yellow text on a black background
+        color_code: ColorCode::new(Color::Green, Color::Black), //set the default color code to yellow text on a black background
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }, //the VGA buffer is located at memory address 0xb8000, so we create a mutable reference to it using an unsafe block
     });
 }
@@ -140,4 +142,14 @@ macro_rules! println { //a macro for printing to the VGA buffer with a newline
 pub fn _print(args: fmt::Arguments) { //an internal function that takes formatted arguments and writes them to the VGA buffer
     use core::fmt::Write; //import the Write trait from the core::fmt module, which allows us to use the write! macro to write formatted strings to the VGA buffer
     WRITER.lock().write_fmt(args).unwrap(); //lock the WRITER mutex, write the formatted arguments to the VGA buffer using the write_fmt method, and unwrap the result to handle any errors
+}
+
+#[test_case]
+fn test_println_output() {
+    let s = "Some test string that fits on a single line";
+    println!("{}", s);
+    for (i, c) in s.chars().enumerate() {
+        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(screen_char.ascii_character), c);
+    }
 }
