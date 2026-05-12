@@ -60,3 +60,39 @@ an example for such an env is the thumbv7em-none-eabihf target, which is a bare-
 `rustup target add thumbv7em-none-eabihf`
 and then we can compile our code for this target by running the following command:
 `cargo build --target thumbv7em-none-eabihf`
+
+    CHAPTER 2: BOOT PROCESS
+
+A computer stores firmware code in a special type of memory called ROM (Read-Only Memory). This firmware code is responsible for initializing the hardware and loading the operating system into memory when the computer is turned on. The process of loading the operating system is called the boot process.
+It then looks for a bootable device, such as a hard drive or a USB drive, and loads the bootloader from that device into memory. The bootloader is a small program that is responsible for loading the operating system kernel into memory and transferring control to it.
+
+on x86, there are two main types of bootloaders: the legacy BIOS bootloader and the newer UEFI bootloader. The BIOS bootloader is the traditional bootloader that has been used for many years, while the UEFI bootloader is a newer standard that provides more features and capabilities.
+The BIOS bootloader is responsible for initializing the hardware and loading the operating system kernel into memory.
+
+BIOS BOOT
+All x86 systems have support for BIOS booting inc newer UEFI systems. The BIOS boot process starts when the computer is powered on and the CPU begins executing code from a specific memory address, which is typically 0xFFFF0. This code is part of the BIOS firmware and is responsible for initializing the hardware and performing a power-on self-test (POST) to ensure that the system is functioning properly. Once BIOS finds bootable disks, it transfers control to the bootloader, which is typically located in the Master Boot Record (MBR) of the disk. The MBR is a special area of the disk that contains the partition table and the bootloader code. The bootloader then loads the operating system kernel into memory and transfers control to it. Most bootloaders are 512 bytes in size, which is the size of the MBR. The bootloader can be written in assembly language or in a high-level language like C or Rust, as long as it can fit within the 512-byte limit of the MBR. The bootloader is responsible for loading the operating system kernel into memory and transferring control to it, which allows the operating system to start running on the computer.
+
+The Bootloaders has to determine the location of the kernel image on the disk and load it into memory. It also needs to switch the CPU from 16-bit real mode to 32-bit protected mode, and then to the 64-bit long mode where 64-bit registers and the complete main memory are available. It also queries certain information such as memory map from the BIOS and passes it to the OS kernel.
+
+Multiboot Standard
+The Multiboot standard is a specification for bootloaders that allows them to load and execute operating system kernels in a standardized way. It defines a set of requirements for bootloaders, such as how they should load the kernel into memory, how they should pass information to the kernel, and how they should handle different types of kernels. By following the Multiboot standard, bootloaders can ensure that they are compatible with a wide range of operating system kernels, which makes it easier for developers to create and distribute their own operating systems. The Multiboot standard is widely used in the OS development community and is supported by many popular bootloaders, such as GRUB and Limine.
+to make a kernel multiboot compliant, we simply inser Multiboot header at the top of the kernel file.
+
+A Minima Kernel
+A minimal kernel is a simple operating system kernel that provides only the basic functionality needed to run a computer. It typically includes a bootloader, a basic memory manager, and a simple scheduler for managing processes. A minimal kernel is often used as a starting point for developing more complex operating systems, as it provides a foundation upon which additional features can be built. By starting with a minimal kernel, developers can focus on implementing the core functionality of the operating system before adding more advanced features.
+
+Target Specification
+Rust allows us to define our own target specification, which is a JSON file that describes the target architecture and environment for our OS kernel. This allows us to customize the build process and ensure that our kernel is built correctly for the target platform. The target specification can include information such as the CPU architecture, the memory layout, and the required linker flags. By defining our own target specification, we can ensure that our kernel is built correctly and can run on the intended hardware platform.
+To define our own target specification, we can create a JSON file called `x86_64-blog_os.json` with the following content:
+
+```json
+{
+  "llvm-target": "x86_64-unknown-none",
+  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "arch": "x86_64",
+  "os": "none",
+  "vendor": "unknown",
+  "linker-flavor": "ld.lld",
+  "linker": "rust-lld"
+}
+```

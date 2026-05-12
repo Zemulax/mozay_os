@@ -1,13 +1,8 @@
+#cargo.toml for mozay_os
 [package]
 name = "mozay_os"
 version = "0.1.0"
-edition = "2024"
-
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
+edition = "2021"
 
 [dependencies]
+bootloader = "0.9.0"

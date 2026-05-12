@@ -1,0 +1,12 @@
+#cargo config for mozay_os
+[build]
+target = "x86_x64-mozay_os.json"
+
+
+[unstable]
+json-target-spec = true
+build-std-features = ["compiler-builtins-mem"]
+build-std = ["core", "compiler_builtins"]
+
+[target.'cfg(target_os = "none")']
+runner = "bootloader runner"
