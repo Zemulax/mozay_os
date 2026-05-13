@@ -1,3 +1,17 @@
+use core::fmt;
+use lazy_static::lazy_static; 
+use spin::Mutex;
+use volatile::Volatile;
+
+lazy_static! {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer { //a lazily initialized static instance of the Writer struct that can be used throughout the kernel to write to the VGA buffer
+        column_position: 0,
+        color_code: ColorCode::new(Color::Green, Color::Black), //set the default color code to yellow text on a black background
+        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }, //the VGA buffer is located at memory address 0xb8000, so we create a mutable reference to it using an unsafe block
+    });
+}
+
+
 #[allow(dead_code)] //disables warnings for unused code, which is common in low-level programming
 #[derive(Debug, Clone, Copy, PartialEq, Eq)] //derives traits for the Color enum, allowing it to be printed, copied, and compared
 #[repr(u8)]
@@ -19,33 +33,29 @@ pub enum Color { //specifies the color codes for the VGA text mode
     Yellow = 14,
     White = 15,
 }
-
-use volatile::Volatile; //import the Volatile type from the volatile crate, which allows us to perform volatile writes to the VGA buffer
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C)] //ensures that the ScreenChar struct has a predictable memory layout, which is important for writing to the VGA buffer
-struct ScreenChar { //represents a character on the VGA text mode screen, consisting of an ASCII character and a color code
-    ascii_character: u8, //the ASCII code of the character to be displayed.
-    color_code: ColorCode, //the color code for the character, which specifies the foreground and background colors
-}
-
-const BUFFER_HEIGHT: usize = 25; //the height of the VGA text mode buffer.)
-const BUFFER_WIDTH: usize = 80; //the width of the VGA text mode buffer
-
-#[repr(transparent)] //ensures that the ColorCode struct has the same memory layout as a u8, which is important for writing to the VGA buffer
-struct Buffer { //represents the VGA text mode buffer, which is a 2D array of ScreenChar structs
-    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT], //the characters in the buffer, stored as a 2D array of ScreenChar structs
-}
-
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)] 
 struct ColorCode(u8); //a wrapper around a u8 that represents a color code for the VGA text mode
-
 
 impl ColorCode {
     fn new(foreground: Color, background: Color) -> ColorCode { //creates a new ColorCode from a foreground and background color
         ColorCode((background as u8) << 4 | (foreground as u8)) //the background color is stored in the high 4 bits and the foreground color in the low 4 bits
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)] 
+struct ScreenChar {
+    ascii_character: u8,
+    color_code: ColorCode,
+}
+
+const BUFFER_HEIGHT: usize = 25;
+const BUFFER_WIDTH: usize = 80;
+
+#[repr(transparent)] //ensures that the ColorCode struct has the same memory layout as a u8, which is important for writing to the VGA buffer
+struct Buffer { //represents the VGA text mode buffer, which is a 2D array of ScreenChar structs
+    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT], //the characters in the buffer, stored as a 2D array of ScreenChar structs
 }
 
 
@@ -105,9 +115,6 @@ impl Writer {
 }
 
 
-
-use core::fmt; //import the fmt module from the core library, which allows us to implement the fmt::Write trait for our Writer struct
-
 impl fmt::Write for Writer { //implement the fmt::Write trait for our Writer struct, allowing us to use the write! macro to write formatted strings to the VGA buffer
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_string(s); //write the string to the VGA buffer using our write_string method
@@ -115,33 +122,22 @@ impl fmt::Write for Writer { //implement the fmt::Write trait for our Writer str
     }
 }
 
-use spin::Mutex; //import the Mutex type from the spin crate, which provides a simple mutex implementation that can be used in a no_std environment
-use lazy_static::lazy_static; //import the lazy_static macro from the lazy_static crate, which allows us to create static instances of our Writer struct that can be safely initialized at runtime
-
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer { //a lazily initialized static instance of the Writer struct that can be used throughout the kernel to write to the VGA buffer
-        column_position: 0,
-        color_code: ColorCode::new(Color::Green, Color::Black), //set the default color code to yellow text on a black background
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }, //the VGA buffer is located at memory address 0xb8000, so we create a mutable reference to it using an unsafe block
-    });
-}
-
-#[macro_export] //make the macro available for use in other modules
-macro_rules! print { //a macro for printing to the VGA buffer without a newline
+#[macro_export] 
+macro_rules! print {
     ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*))); //use the format_args! macro to format the arguments and pass them to the
     //internal _print function, which will write the formatted string to the VGA buffer
 }
 
-#[macro_export] //make the macro available for use in other modules
-macro_rules! println { //a macro for printing to the VGA buffer with a newline
-    () => ($crate::print!("\n")); //if no arguments are provided, just print a newline
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n")); 
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*))); //use the format_args! macro to format the arguments and pass them to the print macro, adding a newline at the end
 }
 
-#[doc(hidden)] //hide this function from the documentation, as it's an internal implementation detail
-pub fn _print(args: fmt::Arguments) { //an internal function that takes formatted arguments and writes them to the VGA buffer
-    use core::fmt::Write; //import the Write trait from the core::fmt module, which allows us to use the write! macro to write formatted strings to the VGA buffer
-    WRITER.lock().write_fmt(args).unwrap(); //lock the WRITER mutex, write the formatted arguments to the VGA buffer using the write_fmt method, and unwrap the result to handle any errors
+#[doc(hidden)] 
+pub fn _print(args: fmt::Arguments) { 
+    use core::fmt::Write; 
+    WRITER.lock().write_fmt(args).unwrap(); 
 }
 
 #[test_case]
