@@ -11,10 +11,14 @@ use core::panic::PanicInfo;
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello, world{}", "!");
+
+    mozay_os::init();// Initialize the Interrupt Descriptor Table (IDT)
+    x86_64::instructions::interrupts::int3(); // Trigger a breakpoint exception
     
     #[cfg(test)] 
     test_main(); 
     
+    println!("It did not crash!");
     loop {}
 }
 
